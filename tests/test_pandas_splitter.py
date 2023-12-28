@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -111,9 +112,11 @@ class TestBatchedDataframe:
             '2023-01-01 00:00:00', '2023-01-01 00:01:00', freq='s',
         )
         df_repeated = pd.DataFrame({'dt': df_unique.repeat(10)})
+        df_repeated['content'] = np.random.randint(0, 100, size=df_repeated.shape[0])
+        df_shuffled = df_repeated.sample(frac=1.0, random_state=42)
 
         # act
-        actual = batched_dataframe(df=df_repeated, chunk_size=chunk_size)
+        actual = batched_dataframe(df=df_shuffled, chunk_size=chunk_size)
         actual_list = list(actual)
         actual_union = pd.concat(actual_list)
 
@@ -127,5 +130,5 @@ class TestBatchedDataframe:
             current_dts.update(current_dts)
 
         assert invariant_dataframe(actual_union).equals(
-            invariant_dataframe(df_repeated),
+            invariant_dataframe(df_shuffled),
         )

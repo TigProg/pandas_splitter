@@ -27,6 +27,8 @@ def batched_dataframe(df: pd.DataFrame,
                       datetime_column_name: str = 'dt') -> Iterator[pd.DataFrame]:
     if chunk_size < 1:
         raise ValueError('chunk_size must be positive')
+    if datetime_column_name not in df.columns:
+        raise KeyError(f'column [{datetime_column_name}] not exist in df')
 
     n_rows = df.shape[0]
     if chunk_size >= n_rows:

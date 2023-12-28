@@ -24,7 +24,7 @@ from pandas_splitter import get_batch_boundaries, batched_dataframe
          datetime(2023, 1, 2, 20),
          datetime(2023, 1, 3, 10),
          datetime(2023, 1, 4, 10),
-     ], 2, [(0, 3), (3, 5), (5, 7)])
+     ], 2, [(0, 3), (3, 5), (5, 7)]),
 ])
 def test__batched_sorted_iter(it, chunk_size, expected):
     assert list(get_batch_boundaries(it=it, chunk_size=chunk_size)) == expected
@@ -40,8 +40,16 @@ class TestBatchedDataframe:
         with pytest.raises(ValueError):
             list(batched_dataframe(
                 df=pd.DataFrame.from_records([[1], [2]], columns=['dt']),
-                chunk_size=chunk_size
+                chunk_size=chunk_size,
             ))
+
+    @pytest.mark.parametrize('df,datetime_column_name', [
+        (pd.DataFrame.from_records([[datetime(2023, 1, 1)]], columns=['created_at']), 'dt'),
+        (pd.DataFrame.from_records([[datetime(2023, 1, 1)]], columns=['dt']), 'created_at'),
+    ])
+    def test_incorrect_column_name(self, df, datetime_column_name):
+        with pytest.raises(KeyError):
+            list(batched_dataframe(df=df, chunk_size=10, datetime_column_name=datetime_column_name))
 
     def test_empty(self):
         # arrange
@@ -68,10 +76,26 @@ class TestBatchedDataframe:
             ],
             columns=['dt', 'other'],
         )
-        chunk_size = 100
 
         # act
-        actual = batched_dataframe(df=df, chunk_size=chunk_size)
+        actual = batched_dataframe(df=df, chunk_size=100)
+        actual_list = list(actual)
+
+        # assert
+        assert len(actual_list) == 1
+        assert invariant_dataframe(df=actual_list[0]).equals(
+            invariant_dataframe(df=df),
+        )
+
+    def test_equal_datetime(self):
+        # arrange
+        df = pd.DataFrame(
+            [[datetime(2023, 1, 1, 1)] for _ in range(100)],
+            columns=['dt'],
+        )
+
+        # act
+        actual = batched_dataframe(df=df, chunk_size=10)
         actual_list = list(actual)
 
         # assert
@@ -84,9 +108,9 @@ class TestBatchedDataframe:
     def test_base(self, chunk_size):
         # arrange
         df_unique = pd.date_range(
-            "2023-01-01 00:00:00", "2023-01-01 00:01:00", freq="s",
+            '2023-01-01 00:00:00', '2023-01-01 00:01:00', freq='s',
         )
-        df_repeated = pd.DataFrame({"dt": df_unique.repeat(10)})
+        df_repeated = pd.DataFrame({'dt': df_unique.repeat(10)})
 
         # act
         actual = batched_dataframe(df=df_repeated, chunk_size=chunk_size)
